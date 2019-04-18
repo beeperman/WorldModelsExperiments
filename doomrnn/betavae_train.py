@@ -3,9 +3,18 @@ Train VAE model on data created using extract.py
 final model saved into tf_vae/vae.json
 '''
 
-import os
+import argparse
 
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # can just override for multi-gpu systems
+parser = argparse.ArgumentParser(description='The ID (integer) of the model')
+parser.add_argument('--int', type=int, default=0, help='an integer default: 0')
+parser.add_argument('--beta', type=float, default=10.0, help='a float default: 10')
+args = parser.parse_args()
+
+model_save_dir = "tf_beta_vae"
+model_save_path = "{}/b{}_{}.json".format(model_save_dir, args.beta, args.int)
+
+import os
+# os.environ["CUDA_VISIBLE_DEVICES"]="0" # can just override for multi-gpu systems
 
 import tensorflow as tf
 import random
@@ -25,9 +34,8 @@ kl_tolerance = 0.5
 NUM_EPOCH = 10
 DATA_DIR = "record"
 
-model_save_path = "tf_vae"
-if not os.path.exists(model_save_path):
-    os.makedirs(model_save_path)
+if not os.path.exists(model_save_dir):
+    os.makedirs(model_save_dir)
 
 
 def load_raw_data_list(filelist):
@@ -90,20 +98,21 @@ class Dataset(object):
 
         # load filename_batch_list
         filelist = os.listdir(DATA_DIR)
-        #filelist.sort()
+        # filelist.sort()
         filelist = filelist[0:10000]
         np.random.shuffle(filelist)
         file_batch_size = len(filelist) // div
         self.filename_batch_list = [filelist[i * file_batch_size: (i + 1) * file_batch_size] for i in range(div)]
         # Call the following method for new epoch (including the first one)
-        #self.load_new_file_batch(new_epoch=True)
+        # self.load_new_file_batch(new_epoch=True)
 
     def load_new_file_batch(self, new_epoch=False):
         if self.is_end() and not new_epoch:
             raise ValueError("epoch ended!")
 
         self.file_batch_count = 0 if new_epoch else self.file_batch_count + 1
-        self.file_batch_dataset = create_dataset(load_raw_data_list(self.filename_batch_list[self.file_batch_count]))
+        self.file_batch_dataset = create_dataset(
+            load_raw_data_list(self.filename_batch_list[self.file_batch_count]))
         self.batch_count = 0
         self.num_batches = len(self.file_batch_dataset) // self.batch_size
         print("num_batches", self.num_batches)
@@ -123,14 +132,15 @@ class Dataset(object):
         self.batch_count += 1
         return batch
 
+
 # dataset class
 dataset = Dataset(DATA_DIR, batch_size, div=10)
 # load dataset from record/*. only use first 10K, sorted by filename.
-#filelist = os.listdir(DATA_DIR)
-#filelist.sort()
-#filelist = filelist[0:10000]
-#dataset = load_raw_data_list(filelist)
-#dataset = create_dataset(dataset)
+# filelist = os.listdir(DATA_DIR)
+# filelist.sort()
+# filelist = filelist[0:10000]
+# dataset = load_raw_data_list(filelist)
+# dataset = create_dataset(dataset)
 
 # split into batches:
 #total_length = len(dataset)
@@ -145,13 +155,15 @@ vae = ConvVAE(z_size=z_size,
               kl_tolerance=kl_tolerance,
               is_training=True,
               reuse=False,
-              gpu_mode=True)
+              gpu_mode=True,
+              beta=args.beta)
 
 # train loop:
 print("train", "step", "loss", "recon_loss", "kl_loss")
 for epoch in range(NUM_EPOCH):
     #np.random.shuffle(dataset)
     dataset.load_new_file_batch(new_epoch=True)
+    #for idx in range(num_batches):
     while not dataset.is_end():
         #batch = dataset[idx * batch_size:(idx + 1) * batch_size]
         batch = dataset.next_batch()
@@ -166,8 +178,8 @@ for epoch in range(NUM_EPOCH):
 
         if ((train_step + 1) % 500 == 0):
             print("step", (train_step + 1), train_loss, r_loss, kl_loss)
-        if ((train_step + 1) % 30000 == 0):
-            vae.save_json("tf_vae/vae.json")
+        if ((train_step + 1) % 5000 == 0):
+            vae.save_json(model_save_path)
 
 # finished, final model:
-vae.save_json("tf_vae/vae.json")
+vae.save_json(model_save_path)
