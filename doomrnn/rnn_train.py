@@ -12,15 +12,26 @@ import time
 
 from doomrnn import reset_graph, HyperParams, Model
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
+import argparse
+
+parser = argparse.ArgumentParser(description='model saving parameters. the rnn will be saved with the same name if modeldir is not tf_rnn')
+parser.add_argument('--modeldir', type=str, default="tf_rnn", help='directory to save the rnn model')
+parser.add_argument('--name', type=str, default="rnn", help='name of the json file e.g. load name.json under model dir')
+args = parser.parse_args()
+
+#os.environ["CUDA_VISIBLE_DEVICES"]="0"
 np.set_printoptions(precision=4, edgeitems=6, linewidth=100, suppress=True)
 
-model_save_path = "tf_rnn"
+model_save_path = args.modeldir
 model_rnn_size = 512
 model_num_mixture = 5
 model_restart_factor = 10.
 
 DATA_DIR = "series"
+load_name = "series" if "tf_rnn" == args.modeldir else args.name
+initial_z_name = "initial_z" if "tf_rnn" == args.modeldir else args.name
+save_name = args.name
 
 if not os.path.exists(model_save_path):
   os.makedirs(model_save_path)
@@ -53,7 +64,7 @@ hps_model = default_hps()
 hps_sample = hps_model._replace(batch_size=1, max_seq_len=2, use_recurrent_dropout=0, is_training=0)
 
 # load preprocessed data
-raw_data = np.load(os.path.join(DATA_DIR, "series.npz"))
+raw_data = np.load(os.path.join(DATA_DIR, "{}.npz".format(load_name)))
 raw_data_mu = raw_data["mu"]
 raw_data_logvar = raw_data["logvar"]
 raw_data_action =  raw_data["action"]
@@ -128,7 +139,7 @@ for i in range(1000):
   logvar = np.copy(raw_data_logvar[i][0, :]*10000).astype(np.int).tolist()
   initial_mu.append(mu)
   initial_logvar.append(logvar)
-with open(os.path.join("tf_initial_z", "initial_z.json"), 'wt') as outfile:
+with open(os.path.join(initial_z_save_path, "{}.json".format(initial_z_name)), 'wt') as outfile:
   json.dump([initial_mu, initial_logvar], outfile, sort_keys=True, indent=0, separators=(',', ': '))
 
 reset_graph()
@@ -170,5 +181,5 @@ for epoch in range(1, 401):
       print(output_log)
 
 # save the model (don't bother with tf checkpoints json all the way ...)
-model.save_json(os.path.join(model_save_path, "rnn.json"))
+model.save_json(os.path.join(model_save_path, "{}.json".format(save_name)))
 

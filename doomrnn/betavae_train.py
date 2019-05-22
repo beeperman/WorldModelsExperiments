@@ -178,7 +178,7 @@ for epoch in range(NUM_EPOCH):
 
         if ((train_step + 1) % 500 == 0):
             print("step", (train_step + 1), train_loss, r_loss, kl_loss)
-        if ((train_step + 1) % 5000 == 0):
+        if ((train_step + 1) % 30000 == 0):
             vae.save_json(model_save_path)
 
 # finished, final model:

@@ -1,0 +1,7 @@
+.idea/
+doomrnn/bash_log
+
+*.pyc
+*.npz
+*.json
+

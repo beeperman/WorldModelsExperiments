@@ -35,7 +35,7 @@ class DoomTakeCoverWrapper(DoomTakeCoverEnv):
 
     reset_graph()
 
-    self.vae = ConvVAE(batch_size=1, gpu_mode=False, is_training=False, reuse=True)
+    self.vae = ConvVAE(batch_size=1, gpu_mode=False, is_training=False, reuse=tf.AUTO_REUSE)
 
     self.rnn = Model(hps_sample, gpu_mode=False)
 

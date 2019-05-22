@@ -95,8 +95,10 @@ class Model:
     model_params = np.array(data[0]) # assuming other stuff is in data
     self.set_model_params(model_params)
     # also load the vae and rnn
-    self.env.vae.load_json('tf_models/vae.json')
-    self.env.rnn.load_json('tf_models/rnn.json')
+    #self.env.vae.load_json('tf_models/vae.json')
+    #self.env.rnn.load_json('tf_models/rnn.json')
+    self.env.vae.load_json('tf_beta_vae/vae.json')
+    self.env.rnn.load_json('tf_beta_rnn/vae.json')
 
   def get_random_model_params(self, stdev=0.1):
     #return np.random.randn(self.param_count)*stdev
@@ -208,6 +210,10 @@ def main():
   if (use_model):
     model.make_env(render_mode=render_mode)
     model.load_model(filename)
+    if "beta" in filename:
+      name = str(filename).replace("beta_log/doomrnn.cma.16.64_", "").replace(".json", "")
+      model.env.vae.load_json('tf_beta_vae/{}.json'.format(name))
+      model.env.rnn.load_json('tf_beta_rnn/{}.json'.format(name))
   else:
     model.make_env(render_mode=render_mode, load_model=False)
     model.init_random_model_params(stdev=np.random.rand()*0.01)
