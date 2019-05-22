@@ -1,5 +1,6 @@
 import deepmind_lab
 import numpy as np
+import random
 from scipy.misc import imresize as resize
 
 SCREEN_X = 64
@@ -14,12 +15,35 @@ def _process_frame(frame):
     return obs
 
 
-class CollectGoodObjectsTrainEnv(object):
-    """Collect good object for training
-    will test with unseen environment"""
+class CollectGoodObjectsEnv(object):
+    """Collect good object environment choose from
+    train
+    test
+    balloon_cake_false
+    balloon_cake_true
+    balloon_can_false
+    balloon_can_true
+    balloon_false
+    balloon_hat_false
+    balloon_hat_true
+    balloon_true
+    cake_can_false
+    cake_can_true
+    cake_false
+    cake_hat_false
+    cake_hat_true
+    cake_true
+    can_false
+    can_true
+    hat_can_false
+    hat_can_true
+    hat_false
+    hat_true
+    """
 
-    def __init__(self, continuous=True):
+    def __init__(self, name="train", continuous=True):
         """ continuous or discrete action space """
+        self.names = name if isinstance(name, list) else [name]
         self.continuous = continuous
         self.old_obs = None
         if continuous:
@@ -27,10 +51,18 @@ class CollectGoodObjectsTrainEnv(object):
         else:
             self.action_space = "scalar discrete: left, right, move forward"
 
-        self.lab = deepmind_lab.Lab("contributed/dmlab30/rooms_collect_good_objects_train", ['RGB_INTERLEAVED'],
-                                    {'fps': '30', })
+        #self.lab = deepmind_lab.Lab("contributed/dmlab30/rooms_collect_good_objects_train", ['RGB_INTERLEAVED'],
+        #                            {'fps': '30', })
+        self.labs = None
+        self.remake(close=False)
+
+        self.lab = None
+        self.lab_name = None
 
     def reset(self, seed=None):
+        sampled_lab = random.sample(self.labs, 1)[0]
+        self.lab_name = sampled_lab[0]
+        self.lab = sampled_lab[1]
         if seed:
             self.lab.reset(seed)
         else:
@@ -70,10 +102,17 @@ class CollectGoodObjectsTrainEnv(object):
     def get_obs(self):
         return _process_frame(self.lab.observations()['RGB_INTERLEAVED'])
 
-    def remake(self):
-        self.lab.close()
-        self.lab = deepmind_lab.Lab("contributed/dmlab30/rooms_collect_good_objects_train", ['RGB_INTERLEAVED'],
-                                    {'fps': '30', })
+    def remake(self, close=True):
+        if close:
+            [lab[1].close() for lab in self.labs]
+
+        self.labs = [(n, deepmind_lab.Lab(self.translate(n), ['RGB_INTERLEAVED'], {'fps': '30', })) for n in self.names]
+
+    def translate(self, name):
+        if name in ["train", "test"]:
+            return "contributed/dmlab30/rooms_collect_good_objects_{}".format(name)
+        else:
+            return "contributed/dmlab30/objects/{}".format(name)
 
 
 class WallAvoidingAgent(object):
@@ -85,7 +124,7 @@ class WallAvoidingAgent(object):
         self.var = var
 
     def get_action(self, obs):
-        if self.on_wall(obs, th=0.5) and np.random.random_sample() < 0.3:
+        if self.on_wall(obs, th=0.2) and np.random.random_sample() < 0.3:
             return 5.1
         else:
             if self.count >= self.repeat:
@@ -100,8 +139,8 @@ class WallAvoidingAgent(object):
         obs = np.reshape(obs, [np.prod(obs.shape[:-1]), obs.shape[-1]])
 
         def color_match(p):
-            if 85 <= p[0] <= 105 and 115 <= p[1] <= 135 and 75 <= p[2] <= 95 \
-                    and 183 <= p[0] <= 133 and 103 <= p[1] <= 123 and 85 <= p[2] <= 105:
+            if (85 <= p[0] <= 105 and 115 <= p[1] <= 135 and 75 <= p[2] <= 95) \
+                    or (183 <= p[0] <= 233 and 103 <= p[1] <= 123 and 85 <= p[2] <= 105):
                 return True
             else:
                 return False

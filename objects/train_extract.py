@@ -1,30 +1,38 @@
 import os
 
+import argparse
+
 from env import WallAvoidingAgent
 from model import Model
 import numpy as np
 import random
 
+parser = argparse.ArgumentParser(description=('collect data for training and testing'))
+parser.add_argument("-t", type=int, default=200, help="how many trials it will run for")
+parser.add_argument("-s", type=int, default=1, help="the stage to extract, choose from 1,2,3,4,5")
+args = parser.parse_args()
+
 MAX_FRAMES = 1800
-MAX_TRIALS = 200
+MAX_TRIALS = args.t
 MIN_LENGTH = 100
 
 DIR_NAME = 'train_record'
 if not os.path.exists(DIR_NAME):
     os.makedirs(DIR_NAME)
 
-model = Model(initialize=False)
+model = Model(stage=args.s, initialize=False)
 
 total_frames = 0
 
 for trial in range(MAX_TRIALS):  # 200 trials per worker
     try:
         random_generated_int = random.randint(0, 2 ** 31 - 1)
-        filename = DIR_NAME + "/" + str(random_generated_int) + ".npz"
+        filename = DIR_NAME + "/{}_" + str(random_generated_int) + ".npz"
         recording_obs = []
         recording_action = []
 
         np.random.seed(random_generated_int)
+        random.seed(random_generated_int)
         pixel_obs = model.env.reset(random_generated_int)
         agent = WallAvoidingAgent(model.env)
 
@@ -45,7 +53,7 @@ for trial in range(MAX_TRIALS):  # 200 trials per worker
         recording_obs = np.array(recording_obs, dtype=np.uint8)
         recording_action = np.array(recording_action, dtype=np.float16)
         if (len(recording_obs) > MIN_LENGTH):
-            np.savez_compressed(filename, obs=recording_obs, action=recording_action)
+            np.savez_compressed(filename.format(model.env.lab_name), obs=recording_obs, action=recording_action)
     except Exception as e:
         print("environment error, remaking")
         model.env.remake()
