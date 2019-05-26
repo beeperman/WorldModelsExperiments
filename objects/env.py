@@ -106,7 +106,7 @@ class CollectGoodObjectsEnv(object):
         if close:
             [lab[1].close() for lab in self.labs]
 
-        self.labs = [(n, deepmind_lab.Lab(self.translate(n), ['RGB_INTERLEAVED'], {'fps': '30', })) for n in self.names]
+        self.labs = [(n, deepmind_lab.Lab(self.translate(n), ['RGB_INTERLEAVED'], {'fps': '30', 'allowHoldOutLevels': 'true'})) for n in self.names]
 
     def translate(self, name):
         if name in ["train", "test"]:
