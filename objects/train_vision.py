@@ -29,7 +29,7 @@ NUM_EPOCH = 10
 DATA_DIR = args.datadir
 
 vae = BetaVAE(z_size=z_size, batch_size=batch_size, learning_rate=learning_rate, kl_tolerance=kl_tolerance, beta=args.beta)
-dataset = DataSet(DATA_DIR, batch_size, div=10)
+dataset = DataSet(DATA_DIR, batch_size, div=100)
 
 print("train", "step", "loss", "recon_loss", "kl_loss")
 for epoch in range(NUM_EPOCH):

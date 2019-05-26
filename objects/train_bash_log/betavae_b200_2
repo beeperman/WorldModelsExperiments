@@ -1,0 +1,20 @@
+2019-05-26 11:11:30.121395: I tensorflow/core/platform/cpu_feature_guard.cc:140] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+2019-05-26 11:11:38.903073: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1356] Found device 0 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.62
+pciBusID: 0000:0c:00.0
+totalMemory: 10.92GiB freeMemory: 10.61GiB
+2019-05-26 11:11:38.903110: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1435] Adding visible gpu devices: 0
+2019-05-26 11:11:39.285760: I tensorflow/core/common_runtime/gpu/gpu_device.cc:923] Device interconnect StreamExecutor with strength 1 edge matrix:
+2019-05-26 11:11:39.285825: I tensorflow/core/common_runtime/gpu/gpu_device.cc:929]      0 
+2019-05-26 11:11:39.285834: I tensorflow/core/common_runtime/gpu/gpu_device.cc:942] 0:   N 
+2019-05-26 11:11:39.286113: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1053] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10218 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:0c:00.0, compute capability: 6.1)
+train step loss recon_loss kl_loss
+loading file 1000
+Traceback (most recent call last):
+  File "train_vision.py", line 37, in <module>
+    dataset.load_new_file_batch(new_epoch=True)
+  File "/data/beeperman/Projects/wme/objects/model.py", line 81, in load_new_file_batch
+    self.file_batch_dataset = self.create_dataset(self.load_raw_data_list(self.filename_batch_list[self.file_batch_count]), self.shuffle)
+  File "/data/beeperman/Projects/wme/objects/model.py", line 129, in create_dataset
+    data = np.zeros((M, 64, 64, 3), dtype=np.uint8)
+MemoryError
