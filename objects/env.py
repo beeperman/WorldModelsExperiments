@@ -143,7 +143,7 @@ class WallAvoidingAgent(object):
 
         # action generation
         if self.count >= self.repeat:
-            self.action = np.clip(np.random.normal(loc=self.mean, scale=np.std), -5, 5)
+            self.action = np.clip(np.random.normal(loc=self.mean, scale=self.std), -5, 5)
             self.count = 0
         else:
             self.action = 0.0
