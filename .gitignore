@@ -1,5 +1,6 @@
 .idea/
 doomrnn/bash_log
+objects/train_bash_log
 
 *.pyc
 *.npz

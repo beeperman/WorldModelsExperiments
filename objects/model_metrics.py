@@ -20,8 +20,8 @@ class TransferMetrics(TensorFlowModel):
         self.yo = tf.layers.dense(self.x, 4, activation=tf.identity)
         self.yw = tf.layers.dense(self.x, 2, activation=tf.identity)
 
-        self.obj_loss = tf.losses.softmax_cross_entropy(tf.one_hot(self.yo_label, 4), self.yo)
-        self.wal_loss = tf.losses.softmax_cross_entropy(tf.one_hot(self.yw_label, 2), self.yw)
+        self.obj_loss = tf.losses.softmax_cross_entropy(tf.one_hot(self.yo_label, 4), self.yo, reduction=tf.losses.Reduction.MEAN)
+        self.wal_loss = tf.losses.softmax_cross_entropy(tf.one_hot(self.yw_label, 2), self.yw, reduction=tf.losses.Reduction.MEAN)
 
         self.obj_train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.obj_loss)
         self.wal_train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.wal_loss)

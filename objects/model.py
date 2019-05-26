@@ -50,7 +50,7 @@ class Model(object):
 
 
 class DataSet(object):
-    def __init__(self, DATA_DIR, batch_size, div=10, shuffle=True):
+    def __init__(self, DATA_DIR, batch_size, div=10, shuffle=True, file_size=10000):
         self.data_dir = DATA_DIR
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -67,7 +67,7 @@ class DataSet(object):
         filelist = os.listdir(DATA_DIR)
         np.random.shuffle(filelist)
         #filelist.sort()
-        filelist = filelist[0:10000]
+        filelist = filelist[0:file_size]
         file_batch_size = len(filelist) // div
         self.filename_batch_list = [filelist[i * file_batch_size: (i + 1) * file_batch_size] for i in range(div)]
         # Call the following method for new epoch (including the first one)
