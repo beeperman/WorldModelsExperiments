@@ -4,165 +4,129 @@ all the dataset files into one dataset called series/series.npz
 '''
 
 import argparse
+import time
 
-parser = argparse.ArgumentParser(description='model loading parameters. the series will be saved with the same name if modeldir is not tf_vae')
-parser.add_argument('--modeldir', type=str, default="tf_vae", help='directory to load the vae model')
-parser.add_argument('--name', type=str, default="vae", help='name of the json file e.g. load name.json under model dir')
-parser.add_argument('--datadir', type=str, default="train_record", help='directory to load data')
+from model_memory import MDNRNN
+
+parser = argparse.ArgumentParser(description='process image data and learn mdn_rnn. choose to load processed data or to generate')
+parser.add_argument('--load', action='store_true', help='load the series file corresponding to the name or process image data from datadir')
+parser.add_argument('--name', type=str, default="all", help='name of the series file to load or save')
+parser.add_argument('--datadir', type=str, default="train_record/stageall", help='directory to load image data')
+parser.add_argument('--int', type=int, default=0, help='the id of the vision model to load an integer default: 0')
+parser.add_argument('--beta', type=float, default=10.0, help='the beta value of the model to load')
 args = parser.parse_args()
 
+
+from model_vision import BetaVAE
+from model import DataSet, SeriesDataSet
 import numpy as np
 import os
 import json
 import tensorflow as tf
+from collections import namedtuple
 np.set_printoptions(precision=4, edgeitems=6, linewidth=100, suppress=True)
 
 import random
 
 DATA_DIR = args.datadir
-SERIES_DIR = "series"
-model_path_name = args.modeldir
-save_name = "series" if "tf_vae" == args.modeldir else args.name
+SERIES_DIR = "train_series"
+series_save_path = "{}/{}.npz".format(SERIES_DIR, args.name)
+# load vision model
+model_load_dir = "train_beta_vae"
+model_load_path = "{}/b{}_{}.json".format(model_load_dir, args.beta, args.int)
+# save memory model
+model_save_dir = "train_rnn"
+model_save_path = "{}/b{}_{}.json".format(model_save_dir, args.beta, args.int)
 
-os.environ["CUDA_VISIBLE_DEVICES"]="-1" # disable GPU
+#os.environ["CUDA_VISIBLE_DEVICES"]="-1" # disable GPU
 
 if not os.path.exists(SERIES_DIR):
-  os.makedirs(SERIES_DIR)
+    os.makedirs(SERIES_DIR)
 
-def load_raw_data_list(filelist):
-  data_list = []
-  action_list = []
-  counter = 0
-  for i in range(len(filelist)):
-    filename = filelist[i]
-    raw_data = np.load(os.path.join(DATA_DIR, filename))
-    data_list.append(raw_data['obs'])
-    action_list.append(raw_data['action'])
-    if ((i+1) % 1000 == 0):
-      print("loading file", (i+1))
-  return data_list, action_list
+if not os.path.exists(model_save_dir):
+    os.makedirs(model_save_dir)
 
-def encode(img):
-  simple_obs = np.copy(img).astype(np.float)/255.0
-  simple_obs = simple_obs.reshape(1, 64, 64, 3)
-  mu, logvar = vae.encode_mu_logvar(simple_obs)
-  z = (mu + np.exp(logvar/2.0) * np.random.randn(*logvar.shape))[0]
-  return mu[0], logvar[0], z
+# rnn hyper parameters
+HyperParams = namedtuple('HyperParams', ['max_seq_len',
+                                         'seq_width',
+                                         'rnn_size',
+                                         'batch_size',
+                                         'grad_clip',
+                                         'num_mixture',
+                                         'restart_factor',
+                                         'learning_rate',
+                                         'decay_rate',
+                                         'min_learning_rate',
+                                         'use_layer_norm',
+                                         'use_recurrent_dropout',
+                                         'recurrent_dropout_prob',
+                                         'use_input_dropout',
+                                         'input_dropout_prob',
+                                         'use_output_dropout',
+                                         'output_dropout_prob',
+                                         'is_training',
+                                         ])
+hps = HyperParams(max_seq_len=500, # train on sequences of 500 (found it worked better than 1000)
+                     seq_width=64,    # width of our data (64)
+                     rnn_size=512,    # number of rnn cells
+                     batch_size=100,   # minibatch sizes
+                     grad_clip=1.0,
+                     num_mixture=5,   # number of mixtures in MDN
+                     restart_factor=10.0, # factor of importance for restart=1 rare case for loss.
+                     learning_rate=0.001,
+                     decay_rate=0.99999,
+                     min_learning_rate=0.00001,
+                     use_layer_norm=0, # set this to 1 to get more stable results (less chance of NaN), but slower
+                     use_recurrent_dropout=0,
+                     recurrent_dropout_prob=0.90,
+                     use_input_dropout=0,
+                     input_dropout_prob=0.90,
+                     use_output_dropout=0,
+                     output_dropout_prob=0.90,
+                     is_training=1)
 
-def decode(z):
-  # decode the latent vector
-  img = vae.decode(z.reshape(1, 64)) * 255.
-  img = np.round(img).astype(np.uint8)
-  img = img.reshape(64, 64, 3)
-  return img
-
-
-# Hyperparameters for ConvVAE
-z_size=64
-batch_size=1
-learning_rate=0.0001
+# Hyperparameters for BetaVAE
+z_size=hps.seq_width
+batch_size=hps.batch_size
+learning_rate=hps.learning_rate
 kl_tolerance=0.5
 
+if args.load:
+    series_dataset = SeriesDataSet(batch_size=batch_size, seq_length=hps.max_seq_len, load_path=series_save_path)
+else:
+    vae = BetaVAE(z_size=z_size, batch_size=batch_size, learning_rate=learning_rate, kl_tolerance=kl_tolerance,
+                  beta=args.beta)
+    vae.load_json(model_load_path)
+    dataset = DataSet(DATA_DIR, batch_size, div=100)
+    series_dataset = SeriesDataSet(batch_size=batch_size, seq_length=hps.max_seq_len, dataset=dataset, vae=vae)
+    series_dataset.save_to_path(series_save_path)
 
-class Dataset(object):
-  def __init__(self, DATA_DIR, batch_size=100, div=10):
-    self.data_dir = DATA_DIR
-    #self.batch_size = batch_size
+mdn_rnn = MDNRNN(hps)
+start = time.time()
 
-    self.div = div
-    self.file_batch_count = div - 1
-    self.filename_batch_list = []
+for epoch in range(1, 401):
+    series_dataset.load_new_epoch()
+    print("epoch {}, number of batches {}".format(epoch, series_dataset.batch_size))
+    batch_state = mdn_rnn.sess.run(mdn_rnn.initial_state)
 
-    self.deknamefile_batch_dataset = None
-    self.file_batch_action_dataset = None
-    self.num_batches = 0
-    self.batch_count = 0
+    while not series_dataset.is_end():
+        batch_z, batch_action, batch_restart = series_dataset.next_batch()
+        step = mdn_rnn.sess.run(mdn_rnn.global_step)
+        curr_learning_rate = (hps.learning_rate - hps.min_learning_rate) * (
+            hps.decay_rate) ** step + hps.min_learning_rate
 
-    # load filename_batch_list
-    filelist = os.listdir(DATA_DIR)
-    filelist.sort()
-    filelist = filelist[0:10000]
-    #np.random.shuffle(filelist)
-    file_batch_size = len(filelist) // div
-    assert file_batch_size * div == len(filelist), "not divisible"
-    self.filename_batch_list = [filelist[i * file_batch_size: (i + 1) * file_batch_size] for i in range(div)]
-    # Call the following method for new epoch (including the first one)
-    # self.load_new_file_batch(new_epoch=True)
+        feed = {mdn_rnn.batch_z: batch_z,
+                mdn_rnn.batch_action: batch_action,
+                mdn_rnn.batch_restart: batch_restart,
+                mdn_rnn.initial_state: batch_state,
+                mdn_rnn.lr: curr_learning_rate}
 
-  def load_new_file_batch(self, new_epoch=False):
-    if self.is_end() and not new_epoch:
-      raise ValueError("epoch ended!")
-
-    self.file_batch_count = 0 if new_epoch else self.file_batch_count + 1
-    self.file_batch_dataset, self.file_batch_action_dataset = load_raw_data_list(self.filename_batch_list[self.file_batch_count])
-    self.batch_count = 0
-    self.num_batches = len(self.file_batch_dataset)
-    print("num_batches", self.num_batches)
-
-  def is_end(self):
-    if self.file_batch_count >= self.div - 1 and self.batch_count >= self.num_batches:
-      return True
-    else:
-      return False
-
-  def next_batch(self):
-    if self.is_end():
-      raise ValueError("epoch ended!")
-    if self.batch_count >= self.num_batches:
-      self.load_new_file_batch()
-    batch = self.file_batch_dataset[self.batch_count]
-    batch_action = self.file_batch_action_dataset[self.batch_count]
-    self.batch_count += 1
-    return batch, batch_action
-
-dataset = Dataset(DATA_DIR, div=100)
-dataset.load_new_file_batch(new_epoch=True)
-#filelist = os.listdir(DATA_DIR)
-#filelist.sort()
-#filelist = filelist[0:10000]
-
-#dataset, action_dataset = load_raw_data_list(filelist)
-
-reset_graph()
-
-vae = ConvVAE(z_size=z_size,
-              batch_size=batch_size,
-              learning_rate=learning_rate,
-              kl_tolerance=kl_tolerance,
-              is_training=False,
-              reuse=False,
-              gpu_mode=False)
-
-vae.load_json(os.path.join(model_path_name, "{}.json".format(args.name)))
-
-mu_dataset = []
-logvar_dataset = []
-action_dataset = []
-#for i in range(len(dataset)):
-i = 0
-while not dataset.is_end():
-  #data = dataset[i]
-  data, action_data = dataset.next_batch()
-  datalen = len(data)
-  mu_data = []
-  logvar_data = []
-  for j in range(datalen):
-    img = data[j]
-    mu, logvar, z = encode(img)
-    mu_data.append(mu)
-    logvar_data.append(logvar)
-  mu_data = np.array(mu_data, dtype=np.float16)
-  logvar_data = np.array(logvar_data, dtype=np.float16)
-  action_data = np.array(action_data)
-  mu_dataset.append(mu_data)
-  logvar_dataset.append(logvar_data)
-  action_dataset.append(action_data)
-  if (i+1) % 100 == 0:
-    print(i+1)
-
-#dataset = np.array(dataset)
-action_dataset = np.array(action_dataset)
-mu_dataset = np.array(mu_dataset)
-logvar_dataset = np.array(logvar_dataset)
-
-np.savez_compressed(os.path.join(SERIES_DIR, "{}.npz".format(save_name)), action=action_dataset, mu=mu_dataset, logvar=logvar_dataset)
+        (train_cost, z_cost, r_cost, batch_state, train_step, _) = mdn_rnn.sess.run(
+            [mdn_rnn.cost, mdn_rnn.z_cost, mdn_rnn.r_cost, mdn_rnn.final_state, mdn_rnn.global_step, mdn_rnn.train_op], feed)
+        if (step % 20 == 0 and step > 0):
+            end = time.time()
+            time_taken = end - start
+            start = time.time()
+            output_log = "step: %d, lr: %.6f, cost: %.4f, z_cost: %.4f, r_cost: %.4f, train_time_taken: %.4f" % (
+            step, curr_learning_rate, train_cost, z_cost, r_cost, time_taken)
+            print(output_log)

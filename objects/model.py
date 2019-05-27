@@ -98,12 +98,15 @@ class DataSet(object):
         indices = self.file_batch_dataset[0][self.batch_count * self.batch_size:(self.batch_count + 1) * self.batch_size]
         data = self.file_batch_dataset[1][indices]
         info = [self.file_batch_dataset[2][i] for i in indices]
+        actions = self.file_batch_dataset[3][indices]
+        restart = self.file_batch_dataset[4][indices]
         self.batch_count += 1
-        return [data, info]
+        return [data, info, actions, restart]
 
     def load_raw_data_list(self, filelist):
         data_list = []
         file_info = []
+        action_list = []
         # any potential info
         other_info = []
         counter = 0
@@ -111,14 +114,15 @@ class DataSet(object):
             filename = filelist[i]
             if '.' not in filename or filename.split('.', 2)[1] != 'npz':
                 continue
-            raw_data = np.load(os.path.join(self.data_dir, filename))['obs']
-            data_list.append(raw_data)
+            raw_data = np.load(os.path.join(self.data_dir, filename))
+            data_list.append(raw_data['obs'])
             raw_file_info = self.parse_filename(filename)
             file_info.append([raw_file_info for _ in range(len(raw_data))])
+            action_list.append(raw_data['act'])
             if ((i + 1) % 1000 == 0):
                 print("loading file", (i + 1))
         assert len(data_list) == len(file_info)
-        return [data_list, file_info]
+        return [data_list, file_info, action_list]
 
 
     # TODO: test include environment info in the dataset
@@ -128,21 +132,27 @@ class DataSet(object):
         M = cls.count_length_of_raw_data(raw_data_list[0])
         data = np.zeros((M, 64, 64, 3), dtype=np.uint8)
         info = []
+        actions = np.zeros((M), dtype=np.float)
+        restart = np.zeros((M), dtype=np.uint8)
         idx = 0
         for i in range(N):
             raw_data = raw_data_list[0][i]
             l = len(raw_data)
             if (idx + l) > M:
                 data = data[0:idx]
+                actions = actions[0:idx]
+                restart = restart[0:idx]
                 break
             data[idx:idx + l] = raw_data
             info += raw_data_list[1][i]
+            actions[idx:idx + l] = raw_data_list[2][i]
+            restart[idx] = 1
             idx += l
         assert len(info) == idx
         permutation = np.arange(idx)
         if shuffle:
             np.random.shuffle(permutation)
-        return [permutation, data, info]
+        return [permutation, data, info, actions, restart]
 
     @staticmethod
     def count_length_of_raw_data(raw_data_list):
@@ -176,6 +186,126 @@ class DataSet(object):
             dict["Wall"] = True if filename_list[2] == "true" else False
             dict["B"] = OBJECT_INDEX[filename_list[1]]
         return dict
+
+class SeriesDataSet(object):
+    def __init__(self, batch_size=100, seq_length=500, load_path=None, dataset=None, vae=None):
+        assert load_path or (dataset and vae)
+
+        self.load_path = load_path
+        self.dataset = dataset
+        self.vae = vae
+
+        self.batch_size = batch_size
+        self.seq_length = seq_length
+        self.num_batches = 0
+        self.batch_count = 0
+
+        self.mu = None
+        self.logvar = None
+        self.info = None
+        self.actions = None
+        self.restart = None
+
+        self.reshaped_mu = None
+        self.reshaped_logvar = None
+        self.reshaped_info = None
+        self.reshaped_actions = None
+        self.reshaped_restart = None
+
+        if load_path:
+            self.load_from_path(load_path)
+        else:
+            self.generate(dataset, vae)
+
+        self.reshape()
+
+    def load_new_epoch(self):
+        self.batch_count = 0
+
+    def is_end(self):
+        return self.batch_count >= self.num_batches
+
+    def next_batch(self):
+        i = self.batch_count
+        self.batch_count += 1
+        batch_z = np.random.normal(loc=self.reshaped_mu[i], scale=np.exp(self.reshaped_logvar[i]/2.0))
+        return [batch_z, self.reshaped_info[i], self.reshaped_actions[i], self.reshaped_restart[i]]
+
+    def generate(self, dataset, vae):
+        list_mu = []
+        list_logvar = []
+        list_info = []
+        list_actions = []
+        list_restart = []
+
+        # collect 1 epoch of data
+        batch_size = dataset.batch_size
+        assert batch_size == vae.batch_size
+        dataset.load_new_file_batch(new_epoch=True)
+        while not dataset.is_end():
+
+            batch = dataset.next_batch()
+
+            obs = batch[0].astype(np.float) / 255.0
+
+            mu, logvar = vae.encode_mu_logvar(obs)
+            info = batch[1]
+            actions = batch[2]
+            restart = batch[3]
+
+            list_mu.append(mu)
+            list_logvar.append(logvar)
+            list_info += info
+            list_actions.append(actions)
+            list_restart.append(restart)
+
+        # organize the data
+        length = len(list_info)
+        self.num_batches = length // (self.batch_size * self.seq_length)
+        num_datapoints = self.num_batches * self.batch_size * self.seq_length
+
+        self.mu = np.zeros((num_datapoints, np.shape(mu)[-1]), dtype=np.float16)
+        self.logvar = np.zeros((num_datapoints, np.shape(logvar)[-1]), dtype=np.float16)
+        self.info = list_info[:num_datapoints]
+        # discrete action ready
+        self.actions = np.zeros((num_datapoints), dtype=actions[0].dtype)
+        self.restart = np.zeros((num_datapoints), dtype=np.uint8)
+
+        idx = 0
+        for i in range(len(list_mu)):
+            l = len(list_mu[i])
+            if idx >= num_datapoints:
+                break
+            if idx + l >= num_datapoints:
+                l = num_datapoints - idx
+
+            self.mu[idx:idx+l] = list_mu[i]
+            self.logvar[idx:idx+l] = list_logvar[i]
+            self.actions[idx:idx+l] = list_actions[i]
+            self.restart[idx:idx+l] = list_restart[i]
+
+            idx += l
+
+
+    def load_from_path(self, load_path):
+        data = np.load(load_path)
+        self.mu = data['mu']
+        self.logvar = data['logvar']
+        self.info = data['info']
+        self.actions = data['action']
+        self.restart = data['restart']
+
+        self.num_batches = len(self.mu) // (self.batch_size * self.seq_length)
+
+    def reshape(self):
+        self.reshaped_mu = np.split(self.mu.reshape(self.batch_size, -1, self.mu.shape[-1]), self.num_batches, 1)
+        self.reshaped_logvar = np.split(self.logvar.reshape(self.batch_size, -1, self.logvar.shape[-1]), self.num_batches, 1)
+        self.reshaped_info = np.split(np.array(self.info).reshape(self.batch_size, -1), self.num_batches, 1)
+        self.reshaped_actions = np.split(self.actions.reshape(self.batch_size, -1), self.num_batches, 1)
+        self.reshaped_restart = np.split(self.restart.reshape(self.batch_size, -1), self.num_batches, 1)
+
+    def save_to_path(self, save_path):
+        np.savez_compressed(save_path, mu=self.mu, logvar=self.logvar, info=self.info, action=self.actions, restart=self.restart)
 
 
 # TODO: Refactor the code
