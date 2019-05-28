@@ -73,15 +73,17 @@ class DataSet(object):
         # Call the following method for new epoch (including the first one)
         #self.load_new_file_batch(new_epoch=True)
 
-    def load_new_file_batch(self, new_epoch=False):
+    def load_new_file_batch(self, new_epoch=False, suppress=False):
         if self.is_end() and not new_epoch:
             raise ValueError("epoch ended!")
 
         self.file_batch_count = 0 if new_epoch else self.file_batch_count + 1
-        self.file_batch_dataset = self.create_dataset(self.load_raw_data_list(self.filename_batch_list[self.file_batch_count]), self.shuffle)
+        if not (self.file_batch_dataset and self.div == 1): # don't load if div is 1
+            self.file_batch_dataset = self.create_dataset(self.load_raw_data_list(self.filename_batch_list[self.file_batch_count]), self.shuffle)
         self.batch_count = 0
         self.num_batches = len(self.file_batch_dataset[0]) // self.batch_size
-        print("num_batches", self.num_batches)
+        if not suppress:
+            print("num_batches", self.num_batches)
 
     def is_end(self):
         if self.file_batch_count >= self.div - 1 and self.batch_count >= self.num_batches:
@@ -117,8 +119,8 @@ class DataSet(object):
             raw_data = np.load(os.path.join(self.data_dir, filename))
             data_list.append(raw_data['obs'])
             raw_file_info = self.parse_filename(filename)
-            file_info.append([raw_file_info for _ in range(len(raw_data))])
-            action_list.append(raw_data['act'])
+            file_info.append([raw_file_info for _ in range(len(data_list[-1]))])
+            action_list.append(raw_data['action'])
             if ((i + 1) % 1000 == 0):
                 print("loading file", (i + 1))
         assert len(data_list) == len(file_info)
@@ -351,7 +353,7 @@ class TensorFlowModel(object):
                         assign_op = var.assign(pl)
                         self.assign_ops[var] = (assign_op, pl)
 
-    def _init_session(self):
+    def _init_session(self, seed=None):
         """Launch TensorFlow session and initialize variables. allow growth"""
         config = tf.ConfigProto(intra_op_parallelism_threads=1)
         config.gpu_options.allow_growth = True

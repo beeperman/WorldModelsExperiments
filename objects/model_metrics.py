@@ -14,8 +14,8 @@ class TransferMetrics(TensorFlowModel):
 
     def _build_graph(self):
         self.x = tf.placeholder(tf.float32, shape=[None, 64])
-        self.yo_label = tf.placeholder(tf.float32, shape=[None])
-        self.yw_label = tf.placeholder(tf.float32, shape=[None])
+        self.yo_label = tf.placeholder(tf.int64, shape=[None])
+        self.yw_label = tf.placeholder(tf.int64, shape=[None])
 
         self.yo = tf.layers.dense(self.x, 4, activation=tf.identity)
         self.yw = tf.layers.dense(self.x, 2, activation=tf.identity)
