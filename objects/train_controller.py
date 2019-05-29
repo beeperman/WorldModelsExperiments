@@ -41,6 +41,7 @@ import sys
 # locate the garage source directory
 __garage_path = os.path.abspath("../../garage/src/")
 sys.path.append(__garage_path)
+os.environ["PYTHONPATH"] = "{}:$PYTHONPATH".format(__garage_path)
 
 from garage.envs import normalize
 from garage.experiment import LocalRunner, run_experiment
