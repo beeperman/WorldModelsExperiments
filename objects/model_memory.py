@@ -2,6 +2,46 @@ import tensorflow as tf
 import numpy as np
 
 from model import TensorFlowModel
+from collections import namedtuple
+
+# rnn hyper parameters
+HyperParams = namedtuple('HyperParams', ['max_seq_len',
+                                         'seq_width',
+                                         'rnn_size',
+                                         'batch_size',
+                                         'grad_clip',
+                                         'num_mixture',
+                                         'restart_factor',
+                                         'learning_rate',
+                                         'decay_rate',
+                                         'min_learning_rate',
+                                         'use_layer_norm',
+                                         'use_recurrent_dropout',
+                                         'recurrent_dropout_prob',
+                                         'use_input_dropout',
+                                         'input_dropout_prob',
+                                         'use_output_dropout',
+                                         'output_dropout_prob',
+                                         'is_training',
+                                         ])
+hps = HyperParams(max_seq_len=500, # train on sequences of 500 (found it worked better than 1000)
+                     seq_width=64,    # width of our data (64)
+                     rnn_size=512,    # number of rnn cells
+                     batch_size=100,   # minibatch sizes
+                     grad_clip=1.0,
+                     num_mixture=5,   # number of mixtures in MDN
+                     restart_factor=10.0, # factor of importance for restart=1 rare case for loss.
+                     learning_rate=0.001,
+                     decay_rate=0.99999,
+                     min_learning_rate=0.00001,
+                     use_layer_norm=0, # set this to 1 to get more stable results (less chance of NaN), but slower
+                     use_recurrent_dropout=0,
+                     recurrent_dropout_prob=0.90,
+                     use_input_dropout=0,
+                     input_dropout_prob=0.90,
+                     use_output_dropout=0,
+                     output_dropout_prob=0.90,
+                     is_training=1)
 
 class MDNRNN(TensorFlowModel):
     def __init__(self, hps, reuse=False, gpu_mode=True):
@@ -138,14 +178,14 @@ class MDNRNN(TensorFlowModel):
 
         flat_target_restart = tf.reshape(self.target_restart, [-1, 1])
 
-        self.r_cost = tf.nn.sigmoid_cross_entropy_with_logits(labels=flat_target_restart,
-                                                              logits=tf.reshape(self.out_restart_logits, [-1, 1]))
+        #self.r_cost = tf.nn.sigmoid_cross_entropy_with_logits(labels=flat_target_restart,
+        #                                                      logits=tf.reshape(self.out_restart_logits, [-1, 1]))
 
-        factor = tf.ones_like(self.r_cost) + flat_target_restart * (self.hps.restart_factor - 1.0)
+        #factor = tf.ones_like(self.r_cost) + flat_target_restart * (self.hps.restart_factor - 1.0)
 
-        self.r_cost = tf.reduce_mean(tf.multiply(factor, self.r_cost))
+        #self.r_cost = tf.reduce_mean(tf.multiply(factor, self.r_cost))
 
-        self.cost = self.z_cost + self.r_cost
+        self.cost = self.z_cost# + self.r_cost
 
         if self.hps.is_training == 1:
             self.lr = tf.Variable(self.hps.learning_rate, trainable=False)

@@ -61,11 +61,12 @@ batch_size = 100
 learning_rate = 0.0001
 kl_tolerance = 0.5
 
-NUM_EPOCH=1
+NUM_EPOCH=2
 
-vae = BetaVAE(z_size=z_size, batch_size=batch_size, learning_rate=learning_rate, kl_tolerance=kl_tolerance)
+np.random.seed(0)
+vae = BetaVAE(z_size=z_size, batch_size=batch_size, learning_rate=learning_rate, kl_tolerance=kl_tolerance, gpu_mode=True)
 vae.close_sess()
-metric = TransferMetrics(z_size=z_size, batch_size=batch_size)
+metric = TransferMetrics(z_size=z_size, batch_size=batch_size, gpu_mode=True)
 metric.close_sess()
 dataset = DataSet(data_dir, batch_size, div=1, file_size=3000)
 dataset_test = DataSet(test_dir, batch_size, div=1, file_size=20)
@@ -80,6 +81,7 @@ for model_path in model_list:
     vae._init_session()
     metric._init_session()
     vae.load_json(os.path.join(model_save_dir, model_path))
+    metric.load_json(os.path.join(metric_save_dir, "default.json"))
     train_step = 0
 
     # train

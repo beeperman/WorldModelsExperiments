@@ -17,7 +17,9 @@ OBJECT_INDEX = {
     "hat": 0,
     "balloon": 1,
     "cake": 2,
-    "can": 3
+    "can": 3,
+    "train": 4,
+    "test": 5
 }
 
 class Model(object):
@@ -182,6 +184,9 @@ class DataSet(object):
             'Wall': None,
             'FileListLen': len(filename_list)
         }
+        if len(filename_list) < 3:
+            return dict
+
         if filename_list[1] in ["true", "false"]:
             dict["Wall"] = True if filename_list[1] == "true" else False
         else:
@@ -290,7 +295,7 @@ class SeriesDataSet(object):
 
 
     def load_from_path(self, load_path):
-        data = np.load(load_path)
+        data = np.load(load_path, allow_pickle=True)
         self.mu = data['mu']
         self.logvar = data['logvar']
         self.info = data['info']
@@ -322,21 +327,26 @@ class TensorFlowModel(object):
         self.reuse = reuse
         self.gpu_mode = gpu_mode
 
-        if not gpu_mode:
+        self.setup_graph_sess()
+
+    def setup_graph_sess(self, seed=None):
+        if not self.gpu_mode:
             with tf.device('/cpu:0'):
                 tf.logging.info('Model using cpu.')
-                self.build_graph()
+                self.build_graph(seed)
         else:
             tf.logging.info('Model using gpu.')
-            self.build_graph()
+            self.build_graph(seed)
         self._init_session()
 
     def _build_graph(self):
         pass
 
-    def build_graph(self):
+    def build_graph(self, seed=None):
         self.g = tf.Graph()
         with self.g.as_default():
+            if seed:
+                tf.set_random_seed(seed)
             with tf.variable_scope(self.scope_name, reuse=self.reuse):
                 self._build_graph()
 
@@ -353,7 +363,7 @@ class TensorFlowModel(object):
                         assign_op = var.assign(pl)
                         self.assign_ops[var] = (assign_op, pl)
 
-    def _init_session(self, seed=None):
+    def _init_session(self):
         """Launch TensorFlow session and initialize variables. allow growth"""
         config = tf.ConfigProto(intra_op_parallelism_threads=1)
         config.gpu_options.allow_growth = True

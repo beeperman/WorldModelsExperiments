@@ -150,8 +150,8 @@ class WallAvoidingAgent(object):
             self.count += 1
         return self.action
 
-
-    def on_wall(self, obs, th):
+    @staticmethod
+    def on_wall(obs, th):
         obs = np.reshape(obs, [np.prod(obs.shape[:-1]), obs.shape[-1]])
 
         def color_match(p):
