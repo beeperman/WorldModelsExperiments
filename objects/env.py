@@ -73,13 +73,13 @@ class CollectGoodObjectsEnv(object):
         action_array = np.array([0, 0, 0, 0, 0, 0, 0], dtype=np.intc)
 
         if self.continuous:
-            assert isinstance(action, np.float)
+            assert isinstance(action, np.float), "{}_{}".format(type(action), action)
             assert action >= -5.1 and action <= 5.1
             action = np.intc(action * 100)
             action_array[3] = 1  # move forward
             action_array[0] = action  # control direction
         else:
-            assert isinstance(action, np.int)
+            assert isinstance(action, np.int), "{}_{}".format(type(action), action)
             assert action >= 0 and action < 3
             if action == 0:  # turn left
                 action_array[0] = -64
@@ -95,7 +95,7 @@ class CollectGoodObjectsEnv(object):
         else:
             obs = self.get_obs()
             self.old_obs = obs
-        info = self.lab.events()
+        info = {'dm_lab_events': self.lab.events()}
 
         return obs, reward, done, info
 
@@ -106,7 +106,7 @@ class CollectGoodObjectsEnv(object):
         if close:
             [lab[1].close() for lab in self.labs]
 
-        self.labs = [(n, deepmind_lab.Lab(self.translate(n), ['RGB_INTERLEAVED'], {'fps': '30', 'allowHoldOutLevels': 'true'})) for n in self.names]
+        self.labs = [(n, deepmind_lab.Lab(self.translate(n), ['RGB_INTERLEAVED'], {'fps': '600', 'allowHoldOutLevels': 'true'})) for n in self.names]
 
     def translate(self, name):
         if name in ["train", "test"]:

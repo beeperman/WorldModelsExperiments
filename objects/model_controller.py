@@ -11,12 +11,17 @@ hps = hps._replace(batch_size=1, max_seq_len=2, use_recurrent_dropout=0, is_trai
 class ControllerEnv(gym.Env):
     def __init__(self, stage=4, vae_load=None, rnn_load=None):
         assert vae_load
+        self.stage = stage
+        self.vae_load = vae_load
+        self.rnn_load = rnn_load
+
         self.model = Model(stage=stage)
         self.vae = BetaVAE(batch_size=1)
         self.vae.load_json(vae_load)
         self.rnn = None
         self.seed = None
 
+        self.step_count = 0
         self.obs = None
         self.z = None
         self.reward = 0.0
@@ -47,6 +52,8 @@ class ControllerEnv(gym.Env):
         return self.get_obs()
 
     def step(self, action):
+        action = action[0]
+
         prev_z = np.zeros((1, 1, hps.seq_width))
         prev_z[0][0] = self.z
 
@@ -70,8 +77,9 @@ class ControllerEnv(gym.Env):
         self.z = self._encode(self.obs)
 
         # punish if the agent stay on the wall
-        if WallAvoidingAgent.on_wall(self.obs, th=0.5):
-            self.reward -= 0.01
+        self.step_count += 1
+        if self.step_count % 20 == 0 and WallAvoidingAgent.on_wall(self.obs, th=0.5):
+            self.reward -= 0.1
 
         return self.get_obs(), self.reward, self.done, self.info
 
@@ -91,3 +99,6 @@ class ControllerEnv(gym.Env):
             return np.concatenate([self.z, self.rnn_state.c.flatten(), self.rnn_state.h.flatten()], axis=0)
         else:
             return self.z
+
+    def reproduce(self):
+        return ControllerEnv(self.stage, self.vae_load, self.rnn_load)
