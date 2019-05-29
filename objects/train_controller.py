@@ -72,7 +72,7 @@ def run_task(*_, **__):
                 env_spec=env.spec,
                 regressor_args=dict(
                     #hidden_sizes=(32, 32),
-                    hidden_sizes=(32),
+                    hidden_sizes=(32,),
                     use_trust_region=True,
                 ),
             )
