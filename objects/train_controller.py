@@ -103,33 +103,33 @@ experiment_path = os.path.join(experiment_dir, "b{}_{}_{}_s{}_{}".format(args.be
 
 run_experiment(run_task, snapshot_mode="last", log_dir=experiment_path, seed=args.seed)
 
-from env import WallAvoidingAgent
-total_frames = 0
-env = ControllerEnv(vae_load=vision_load_path, rnn_load=memory_load_path)
-try:
-    recording_obs = []
-    recording_action = []
-
-    pixel_obs = env.reset()
-    pixel_obs = env.obs
-    agent = WallAvoidingAgent(env.model.env)
-
-    # random policy
-    # more diverse random policy, works slightly better:
-
-    for frame in range(1800):
-        action = agent.get_action(pixel_obs)
-        recording_obs.append(pixel_obs)
-        recording_action.append(action)
-        pixel_obs, reward, done, info = env.step(action)
-        pixel_obs = env.obs
-
-        if done:
-            break
-
-    total_frames += frame
-    print("dead at", frame, "total recorded frames for this worker", total_frames)
-except Exception as e:
-    print("environment error, resetting")
-    env.reset()
+#from env import WallAvoidingAgent
+#total_frames = 0
+#env = ControllerEnv(vae_load=vision_load_path, rnn_load=memory_load_path)
+#try:
+#    recording_obs = []
+#    recording_action = []
+#
+#    pixel_obs = env.reset()
+#    pixel_obs = env.obs
+#    agent = WallAvoidingAgent(env.model.env)
+#
+#    # random policy
+#    # more diverse random policy, works slightly better:
+#
+#    for frame in range(1800):
+#        action = agent.get_action(pixel_obs)
+#        recording_obs.append(pixel_obs)
+#        recording_action.append(action)
+#        pixel_obs, reward, done, info = env.step(action)
+#        pixel_obs = env.obs
+#
+#        if done:
+#            break
+#
+#    total_frames += frame
+#    print("dead at", frame, "total recorded frames for this worker", total_frames)
+#except Exception as e:
+#    print("environment error, resetting")
+#    env.reset()
 
