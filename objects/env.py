@@ -1,3 +1,5 @@
+import time
+
 import deepmind_lab
 import numpy as np
 import random
@@ -106,7 +108,7 @@ class CollectGoodObjectsEnv(object):
         if close:
             [lab[1].close() for lab in self.labs]
 
-        self.labs = [(n, deepmind_lab.Lab(self.translate(n), ['RGB_INTERLEAVED'], {'fps': '600', 'allowHoldOutLevels': 'true'})) for n in self.names]
+        self.labs = [(n, deepmind_lab.Lab(self.translate(n), ['RGB_INTERLEAVED'], {'fps': '30', 'allowHoldOutLevels': 'true'})) for n in self.names]
 
     def translate(self, name):
         if name in ["train", "test"]:
@@ -154,12 +156,25 @@ class WallAvoidingAgent(object):
     def on_wall(obs, th):
         obs = np.reshape(obs, [np.prod(obs.shape[:-1]), obs.shape[-1]])
 
-        def color_match(p):
-            if (85 <= p[0] <= 105 and 115 <= p[1] <= 135 and 75 <= p[2] <= 95) \
-                    or (183 <= p[0] <= 233 and 103 <= p[1] <= 123 and 85 <= p[2] <= 105):
-                return True
-            else:
-                return False
+        #start_time = time.time()
 
-        count = np.sum([1.0 if color_match(obs[i]) else 0.0 for i in range(obs.shape[0])], dtype=np.float)
+        in_green = np.prod((obs >= [85, 115, 75]) * (obs <= [105, 135, 95]), axis=-1)
+        in_pink = np.prod((obs >= [183, 103, 85]) * (obs <= [233, 123, 105]), axis=-1)
+        match = in_pink + in_green
+        count = np.sum(match.astype(np.float32))
+
+        #elapsed_time0 = time.time()
+
+        #def color_match(p):
+        #    if (85 <= p[0] <= 105 and 115 <= p[1] <= 135 and 75 <= p[2] <= 95) \
+        #            or (183 <= p[0] <= 233 and 103 <= p[1] <= 123 and 85 <= p[2] <= 105):
+        #        return True
+        #    else:
+        #        return False
+
+        #count = np.sum([1.0 if color_match(obs[i]) else 0.0 for i in range(obs.shape[0])], dtype=np.float)
+        #elapsed_time = time.time()
+
+        #print(elapsed_time0 - start_time, elapsed_time - elapsed_time0, count == count_test)
+
         return True if count / obs.shape[0] > th else False

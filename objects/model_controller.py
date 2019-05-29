@@ -30,9 +30,11 @@ class ControllerEnv(gym.Env):
         self.zero_state = None
         self.rnn_state = None
 
+        self.action_scale = 0.4
+
         self.model.env.reset()
 
-        self.action_space = spaces.Box(-5.1, 5.1, shape=())
+        self.action_space = spaces.Box(-5.09 / self.action_scale, 5.09 / self.action_scale, shape=())
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(hps.seq_width, ))
         if rnn_load:
             self.rnn = MDNRNN(hps)
@@ -52,7 +54,7 @@ class ControllerEnv(gym.Env):
         return self.get_obs()
 
     def step(self, action):
-        action = action[0]
+        action = action[0] * self.action_scale
 
         prev_z = np.zeros((1, 1, hps.seq_width))
         prev_z[0][0] = self.z
@@ -78,8 +80,8 @@ class ControllerEnv(gym.Env):
 
         # punish if the agent stay on the wall
         self.step_count += 1
-        if self.step_count % 20 == 0 and WallAvoidingAgent.on_wall(self.obs, th=0.5):
-            self.reward -= 0.1
+        if WallAvoidingAgent.on_wall(self.obs, th=0.5):
+            self.reward -= 0.01
 
         return self.get_obs(), self.reward, self.done, self.info
 
