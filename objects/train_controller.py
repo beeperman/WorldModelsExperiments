@@ -29,7 +29,7 @@ parser.add_argument('--beta', type=float, default=10.0, help='the beta value of 
 args = parser.parse_args()
 
 # load vision model
-vision_load_dir = "train_beta_vae"
+vision_load_dir = "train_beta_vae_wm"
 vision_load_path = "{}/b{}_{}.json".format(vision_load_dir, args.beta, args.int)
 # save memory model
 memory_load_dir = "train_rnn"
@@ -81,7 +81,7 @@ def run_task(*_, **__):
                 env_spec=env.spec,
                 policy=policy,
                 baseline=baseline,
-                max_path_length=1024,
+                max_path_length=1030,
                 discount=0.9,
                 gae_lambda=0.95,
                 lr_clip_range=0.2,
@@ -89,7 +89,7 @@ def run_task(*_, **__):
                 optimizer_args=dict(
                     batch_size=32,
                     max_epochs=10,
-                    learning_rate=0.001
+                    learning_rate=0.0001
                 ),
                 plot=False,
             )

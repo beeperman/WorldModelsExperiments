@@ -35,7 +35,7 @@ DATA_DIR = args.datadir
 SERIES_DIR = "train_series"
 series_save_path = "{}/b{}_{}_{}.npz".format(SERIES_DIR, args.beta, args.int, args.name)
 # load vision model
-model_load_dir = "train_beta_vae"
+model_load_dir = "train_beta_vae_wm"
 model_load_path = "{}/b{}_{}.json".format(model_load_dir, args.beta, args.int)
 # save memory model
 model_save_dir = "train_rnn"
@@ -62,7 +62,7 @@ else:
 mdn_rnn = MDNRNN(hps)
 start = time.time()
 
-for epoch in range(1, 401):
+for epoch in range(1, 151):
     series_dataset.load_new_epoch()
     print("epoch {}, number of batches {}".format(epoch, series_dataset.num_batches))
     batch_state = mdn_rnn.sess.run(mdn_rnn.initial_state)

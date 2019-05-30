@@ -32,7 +32,7 @@ hps = HyperParams(max_seq_len=500, # train on sequences of 500 (found it worked 
                      num_mixture=5,   # number of mixtures in MDN
                      restart_factor=10.0, # factor of importance for restart=1 rare case for loss.
                      learning_rate=0.001,
-                     decay_rate=0.99999,
+                     decay_rate=0.99997,
                      min_learning_rate=0.00001,
                      use_layer_norm=0, # set this to 1 to get more stable results (less chance of NaN), but slower
                      use_recurrent_dropout=0,
