@@ -35,7 +35,7 @@ DATA_DIR = args.datadir
 SERIES_DIR = "train_series"
 series_save_path = "{}/b{}_{}_{}.npz".format(SERIES_DIR, args.beta, args.int, args.name)
 # load vision model
-model_load_dir = "train_beta_vae_wm"
+model_load_dir = "train_beta_vae"
 model_load_path = "{}/b{}_{}.json".format(model_load_dir, args.beta, args.int)
 # save memory model
 model_save_dir = "train_rnn"
