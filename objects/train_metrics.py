@@ -61,7 +61,7 @@ batch_size = 100
 learning_rate = 0.0001
 kl_tolerance = 0.5
 
-NUM_EPOCH=2
+NUM_EPOCH=1
 
 np.random.seed(0)
 vae = BetaVAE(z_size=z_size, batch_size=batch_size, learning_rate=learning_rate, kl_tolerance=kl_tolerance, gpu_mode=True)
