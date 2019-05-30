@@ -73,7 +73,7 @@ class BetaVAE(TensorFlowModel):
                 (1 + self.logvar - tf.square(self.mu) - tf.exp(self.logvar)),
                 reduction_indices=1
             )
-            self.kl_loss = tf.maximum(self.kl_loss, self.kl_tolerance * self.z_size)
+            #self.kl_loss = tf.maximum(self.kl_loss, self.kl_tolerance * self.z_size)
             self.kl_loss = tf.reduce_mean(self.kl_loss)
 
             # beta = 100.0

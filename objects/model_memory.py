@@ -46,6 +46,8 @@ hps = HyperParams(max_seq_len=500, # train on sequences of 500 (found it worked 
 class MDNRNN(TensorFlowModel):
     def __init__(self, hps, reuse=False, gpu_mode=True):
         self.hps = hps
+
+        self.rnn_state = None
         super().__init__('mdn_rnn', reuse, gpu_mode)
 
     def _build_graph(self):
@@ -195,3 +197,68 @@ class MDNRNN(TensorFlowModel):
             capped_gvs = [(tf.clip_by_value(grad, -self.hps.grad_clip, self.hps.grad_clip), var) for grad, var in
                           gvs]
             self.train_op = optimizer.apply_gradients(capped_gvs, global_step=self.global_step, name='train_step')
+
+    def predict(self, z, action, rnn_state=None, restart=False, temperature=1.0):
+        if rnn_state:
+            self.rnn_state = rnn_state
+        if not self.rnn_state or restart:
+            self.rnn_state = self.sess.run(self.zero_state)
+
+        prev_z = np.zeros((1, 1, self.hps.seq_width))
+        prev_z[0][0] = z
+
+        prev_action = np.zeros((1, 1))
+        prev_action[0] = action
+
+        prev_restart = np.zeros((1, 1))
+
+        s_model = self
+
+        feed = {s_model.input_z: prev_z,
+                s_model.input_action: prev_action,
+                s_model.input_restart: prev_restart,
+                s_model.initial_state: self.rnn_state
+                }
+
+        [logmix, mean, logstd, next_state] = s_model.sess.run([s_model.out_logmix,
+                                                                           s_model.out_mean,
+                                                                           s_model.out_logstd,
+                                                                           s_model.final_state],
+                                                                          feed)
+
+        self.rnn_state = next_state
+        #OUTWIDTH = self.outwidth
+        OUTWIDTH = self.hps.seq_width
+
+        # adjust temperatures
+        logmix2 = np.copy(logmix) / temperature
+        logmix2 -= logmix2.max()
+        logmix2 = np.exp(logmix2)
+        logmix2 /= logmix2.sum(axis=1).reshape(OUTWIDTH, 1)
+
+        mixture_idx = np.zeros(OUTWIDTH)
+        chosen_mean = np.zeros(OUTWIDTH)
+        chosen_logstd = np.zeros(OUTWIDTH)
+        for j in range(OUTWIDTH):
+            idx = self.get_pi_idx(np.random.rand(), logmix2[j])
+            mixture_idx[j] = idx
+            chosen_mean[j] = mean[j][idx]
+            chosen_logstd[j] = logstd[j][idx]
+
+        rand_gaussian = np.random.randn(OUTWIDTH) * np.sqrt(temperature)
+        next_z = chosen_mean + np.exp(chosen_logstd) * rand_gaussian
+
+        return next_z
+
+    @staticmethod
+    def get_pi_idx(x, pdf):
+        # samples from a categorial distribution
+        N = pdf.size
+        accumulate = 0
+        for i in range(0, N):
+            accumulate += pdf[i]
+            if (accumulate >= x):
+                return i
+        random_value = np.random.randint(N)
+        # print('error with sampling ensemble, returning random', random_value)
+        return random_value

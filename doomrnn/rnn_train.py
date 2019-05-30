@@ -64,7 +64,7 @@ hps_model = default_hps()
 hps_sample = hps_model._replace(batch_size=1, max_seq_len=2, use_recurrent_dropout=0, is_training=0)
 
 # load preprocessed data
-raw_data = np.load(os.path.join(DATA_DIR, "{}.npz".format(load_name)))
+raw_data = np.load(os.path.join(DATA_DIR, "{}.npz".format(load_name)), allow_pickle=True)
 raw_data_mu = raw_data["mu"]
 raw_data_logvar = raw_data["logvar"]
 raw_data_action =  raw_data["action"]

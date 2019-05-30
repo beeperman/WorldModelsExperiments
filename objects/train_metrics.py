@@ -49,7 +49,7 @@ metric_save_dir = "train_bvae_metrics"
 
 result = {}
 if os.path.exists(os.path.join(metric_save_dir, "result.npz")):
-    result = np.load(os.path.join(metric_save_dir, "result.npz"))['dict'].item()
+    result = np.load(os.path.join(metric_save_dir, "result.npz"), allow_pickle=True)['dict'].item()
 
 if not os.path.exists(metric_save_dir):
     os.makedirs(metric_save_dir)

@@ -39,7 +39,7 @@ model_load_dir = "train_beta_vae"
 model_load_path = "{}/b{}_{}.json".format(model_load_dir, args.beta, args.int)
 # save memory model
 model_save_dir = "train_rnn"
-model_save_path = "{}/b{}_{}.json".format(model_save_dir, args.beta, args.int)
+model_save_path = "{}/b{}_{}_{}.json".format(model_save_dir, args.beta, args.int, args.name)
 
 #os.environ["CUDA_VISIBLE_DEVICES"]="-1" # disable GPU
 
@@ -55,7 +55,7 @@ else:
     vae = BetaVAE(z_size=z_size, batch_size=batch_size, learning_rate=learning_rate, kl_tolerance=kl_tolerance,
                   beta=args.beta)
     vae.load_json(model_load_path)
-    dataset = DataSet(DATA_DIR, batch_size, div=100)
+    dataset = DataSet(DATA_DIR, batch_size, div=100, shuffle=False)
     series_dataset = SeriesDataSet(batch_size=batch_size, seq_length=hps.max_seq_len, dataset=dataset, vae=vae)
     series_dataset.save_to_path(series_save_path)
 

@@ -32,9 +32,9 @@ class ControllerEnv(gym.Env):
 
         self.action_scale = 0.4
 
-        self.model.env.reset()
+        self.reset()
 
-        self.action_space = spaces.Box(-5.09 / self.action_scale, 5.09 / self.action_scale, shape=())
+        self.action_space = spaces.Box(-5.0 / self.action_scale, 5.0 / self.action_scale, shape=())
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(hps.seq_width, ))
         if rnn_load:
             self.rnn = MDNRNN(hps)
@@ -54,7 +54,7 @@ class ControllerEnv(gym.Env):
         return self.get_obs()
 
     def step(self, action):
-        action = action[0] * self.action_scale
+        action = np.clip(action[0] * self.action_scale, -5.0, 5.0)
 
         prev_z = np.zeros((1, 1, hps.seq_width))
         prev_z[0][0] = self.z
