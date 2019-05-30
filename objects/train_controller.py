@@ -99,7 +99,7 @@ def run_task(*_, **__):
             runner.train(n_epochs=1200, batch_size=2048, plot=False)
 
 experiment_dir = os.path.abspath("train_ctrler_experiment")
-experiment_path = os.path.join(experiment_dir, "b{}_{}_{}_s{}_{}".format(args.beta, args.int, args.name, args.seed,
+experiment_path = os.path.join(experiment_dir, "b{}_{}_{}_s{}_{}".format(args.beta, args.int, args.name if args.loadrnn else "nornn", args.seed,
                     "{}-{}-{}_{}:{}:{}".format(now.year, now.month, now.day, now.hour, now.minute, now.second, now.microsecond)))
 
 run_experiment(run_task, snapshot_mode="last", log_dir=experiment_path, seed=args.seed)
