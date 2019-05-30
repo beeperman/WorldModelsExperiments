@@ -1,4 +1,3 @@
-
 beta="0.05
 0.5
 5
@@ -24,7 +23,7 @@ do
   CUDA_VISIBLE_DEVICES=$(($var%8)) python train_vision.py --beta $b --int 23 --datadir train_record/stage1new &> train_bash_log/betavae_b${b}_23 &
   echo "${var}th name: $0 assigned to $(($var%8))th gpu"
   var=$((var+1))
- # CUDA_VISIBLE_DEVICES=$(($var%8)) python train_vision.py --beta $b --int 24 --datadir train_record/stage1new &> train_bash_log/betavae_b${b}_4 &
+ # CUDA_VISIBLE_DEVICES=$(($var%8)) python train_vision.py --beta $b --int 24 --datadir train_record/stage1new &> train_bash_log/betavae_b${b}_24 &
  # echo "${var}th name: $0 assigned to $(($var%8))th gpu"
  # var=$((var+1))
 done

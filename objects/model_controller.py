@@ -67,13 +67,14 @@ class ControllerEnv(gym.Env):
 
         s_model = self.rnn
 
-        feed = {s_model.input_z: prev_z,
-                s_model.input_action: prev_action,
-                s_model.input_restart: prev_restart,
-                s_model.initial_state: self.rnn_state
-                }
+        if s_model:
+            feed = {s_model.input_z: prev_z,
+                    s_model.input_action: prev_action,
+                    s_model.input_restart: prev_restart,
+                    s_model.initial_state: self.rnn_state
+                    }
 
-        self.rnn_state = s_model.sess.run(s_model.final_state, feed)
+            self.rnn_state = s_model.sess.run(s_model.final_state, feed)
 
         self.obs, self.reward, self.done, self.info = self.model.env.step(action)
         self.z = self._encode(self.obs)
