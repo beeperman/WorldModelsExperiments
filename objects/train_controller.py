@@ -81,7 +81,7 @@ def run_task(*_, **__):
                 env_spec=env.spec,
                 policy=policy,
                 baseline=baseline,
-                max_path_length=1030,
+                max_path_length=530,
                 discount=0.9,
                 gae_lambda=0.95,
                 lr_clip_range=0.2,
