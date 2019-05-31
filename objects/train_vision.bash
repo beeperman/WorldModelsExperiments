@@ -1,7 +1,5 @@
-beta="0.05
-0.5
-5
-0.005"
+beta="0.005
+0.001"
 
 #0: old wall avoiding agent
 #1: new wall avoiding agent
