@@ -33,7 +33,7 @@ vision_load_dir = "train_beta_vae"
 vision_load_path = "{}/b{}_{}.json".format(vision_load_dir, args.beta, args.int)
 # save memory model
 memory_load_dir = "train_rnn"
-memory_load_path = "{}/b{}_{}.json".format(memory_load_dir, args.beta, args.int) if args.loadrnn else None
+memory_load_path = "{}/b{}_{}_{}.json".format(memory_load_dir, args.beta, args.int, args.name) if args.loadrnn else None
 
 
 import os
