@@ -9,7 +9,7 @@ from model_vision import BetaVAE
 
 hps = hps._replace(batch_size=1, max_seq_len=2, use_recurrent_dropout=0, is_training=0)
 class ControllerEnv(gym.Env):
-    def __init__(self, stage=4, vae_load=None, rnn_load=None):
+    def __init__(self, stage=2, vae_load=None, rnn_load=None):
         assert vae_load
         self.stage = stage
         self.vae_load = vae_load
