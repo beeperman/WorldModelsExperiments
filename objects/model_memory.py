@@ -180,8 +180,8 @@ class MDNRNN(TensorFlowModel):
 
         flat_target_restart = tf.reshape(self.target_restart, [-1, 1])
 
-        #self.r_cost = tf.nn.sigmoid_cross_entropy_with_logits(labels=flat_target_restart,
-        #                                                      logits=tf.reshape(self.out_restart_logits, [-1, 1]))
+        self.r_cost = tf.nn.sigmoid_cross_entropy_with_logits(labels=flat_target_restart,
+                                                              logits=tf.reshape(self.out_restart_logits, [-1, 1]))
 
         #factor = tf.ones_like(self.r_cost) + flat_target_restart * (self.hps.restart_factor - 1.0)
 
@@ -228,6 +228,29 @@ class MDNRNN(TensorFlowModel):
 
         self.rnn_state = next_state
         #OUTWIDTH = self.outwidth
+        OUTWIDTH = self.hps.seq_width
+
+        # adjust temperatures
+        logmix2 = np.copy(logmix) / temperature
+        logmix2 -= logmix2.max()
+        logmix2 = np.exp(logmix2)
+        logmix2 /= logmix2.sum(axis=1).reshape(OUTWIDTH, 1)
+
+        mixture_idx = np.zeros(OUTWIDTH)
+        chosen_mean = np.zeros(OUTWIDTH)
+        chosen_logstd = np.zeros(OUTWIDTH)
+        for j in range(OUTWIDTH):
+            idx = self.get_pi_idx(np.random.rand(), logmix2[j])
+            mixture_idx[j] = idx
+            chosen_mean[j] = mean[j][idx]
+            chosen_logstd[j] = logstd[j][idx]
+
+        rand_gaussian = np.random.randn(OUTWIDTH) * np.sqrt(temperature)
+        next_z = chosen_mean + np.exp(chosen_logstd) * rand_gaussian
+
+        return next_z
+
+    def get_next_z(self, logmix, mean, logstd, temperature=1.0):
         OUTWIDTH = self.hps.seq_width
 
         # adjust temperatures

@@ -1,5 +1,5 @@
 beta="
-200"
+50"
 
 #0: old wall avoiding agent
 #1: new wall avoiding agent
@@ -10,16 +10,16 @@ var=0
 for b in $beta
 do
   #name=${f:12:-5}
-  CUDA_VISIBLE_DEVICES=$(($var%8)) python train_memory.py --beta $b --int 10 &> train_bash_log/rnn_b${b}_10_all &
+  CUDA_VISIBLE_DEVICES=$(($var%8)) python train_memory.py --beta $b --int 0 --datadir train_record/stagett --name tt &> train_bash_log/rnn_b${b}_0_tt &
   echo "${var}th name: $0 assigned to $(($var%8))th gpu"
   var=$((var+1))
-  CUDA_VISIBLE_DEVICES=$(($var%8)) python train_memory.py --beta $b --int 11 &> train_bash_log/rnn_b${b}_11_all &
+  CUDA_VISIBLE_DEVICES=$(($var%8)) python train_memory.py --beta $b --int 1 --datadir train_record/stagett --name tt &> train_bash_log/rnn_b${b}_1_tt &
   echo "${var}th name: $0 assigned to $(($var%8))th gpu"
   var=$((var+1))
-  CUDA_VISIBLE_DEVICES=$(($var%8)) python train_memory.py --beta $b --int 12 &> train_bash_log/rnn_b${b}_12_all &
+  CUDA_VISIBLE_DEVICES=$(($var%8)) python train_memory.py --beta $b --int 2 --datadir train_record/stagett --name tt &> train_bash_log/rnn_b${b}_2_tt &
   echo "${var}th name: $0 assigned to $(($var%8))th gpu"
   var=$((var+1))
-  CUDA_VISIBLE_DEVICES=$(($var%8)) python train_memory.py --beta $b --int 13 &> train_bash_log/rnn_b${b}_13_all &
+  CUDA_VISIBLE_DEVICES=$(($var%8)) python train_memory.py --beta $b --int 3 --datadir train_record/stagett --name tt &> train_bash_log/rnn_b${b}_2_tt &
   echo "${var}th name: $0 assigned to $(($var%8))th gpu"
   var=$((var+1))
  # CUDA_VISIBLE_DEVICES=$(($var%8)) python train_memory.py --beta $b --int 24 &> train_bash_log/rnn_b${b}_24_all &

@@ -1,4 +1,5 @@
-beta="100
+beta="50
+100
 "
 
 #0: old wall avoiding agent
