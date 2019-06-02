@@ -3,6 +3,7 @@ doomrnn/bash_log
 objects/train_record
 objects/train_bash_log
 objects/train_ctrler_experiment
+objects/test_*
 
 *.pyc
 *.npz
