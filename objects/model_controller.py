@@ -99,7 +99,7 @@ class ControllerEnv(gym.Env):
 
         # punish if the agent stay on the wall
         self.step_count += 1
-        if self.obs != None and WallAvoidingAgent.on_wall(self.obs, th=0.5):
+        if self.model and WallAvoidingAgent.on_wall(self.obs, th=0.5):
             self.reward -= 0.01
 
         return self.get_obs(), self.reward, self.done, self.info
