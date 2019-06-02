@@ -9,17 +9,17 @@ from model_vision import BetaVAE
 
 hps = hps._replace(batch_size=1, max_seq_len=2, use_recurrent_dropout=0, is_training=0)
 class ControllerEnv(gym.Env):
-    def __init__(self, stage=2, vae_load=None, rnn_load=None):
-        assert vae_load
+    def __init__(self, stage=2, vae_load=None, rnn_load=None, temperature=1.0):
+        assert vae_load or rnn_load
         self.stage = stage
         self.vae_load = vae_load
         self.rnn_load = rnn_load
+        self.temperature = temperature
 
-        self.model = Model(stage=stage)
+        self.model = None
         self.vae = BetaVAE(batch_size=1)
-        self.vae.load_json(vae_load)
         self.rnn = None
-        self.seed = None
+        self._seed = None
 
         self.step_count = 0
         self.obs = None
@@ -36,6 +36,12 @@ class ControllerEnv(gym.Env):
 
         self.action_space = spaces.Box(-5.0 / self.action_scale, 5.0 / self.action_scale, shape=())
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(hps.seq_width, ))
+
+        if vae_load:
+            self.model = Model(stage=stage)
+            self.vae.load_json(vae_load)
+
+
         if rnn_load:
             self.rnn = MDNRNN(hps)
             self.rnn.load_json(rnn_load)
@@ -44,11 +50,17 @@ class ControllerEnv(gym.Env):
             self.observation_space = spaces.Box(-np.inf, np.inf, shape=(hps.seq_width + hps.rnn_size * 2, ))
 
     def seed(self, seed=None):
-        self.seed = seed
+        #self._seed = seed
+        self._seed = None
 
     def reset(self):
-        self.obs = self.model.env.reset(self.seed)
-        self.z = self._encode(self.obs)
+        if self.model:
+            self.obs = self.model.env.reset(self._seed)
+            self._seed = None
+            self.z = self._encode(self.obs)
+        else:
+            self.z = np.clip(np.random.rand(self.rnn.hps.seq_width), -1, 1)
+
         self.rnn_state = self.zero_state
         self.done = True
         return self.get_obs()
@@ -74,10 +86,13 @@ class ControllerEnv(gym.Env):
                     s_model.initial_state: self.rnn_state
                     }
 
-            self.rnn_state = s_model.sess.run(s_model.final_state, feed)
+            logmix, mean, logstd, self.rnn_state = s_model.sess.run(s_model.target_z, s_model.final_state, feed)
+            self.z = s_model.get_next_z(logmix, mean, logstd, self.temperature)
 
-        self.obs, self.reward, self.done, self.info = self.model.env.step(action)
-        self.z = self._encode(self.obs)
+        if self.model:
+            self.obs, self.reward, self.done, self.info = self.model.env.step(action)
+            self.z = self._encode(self.obs)
+
 
         # punish if the agent stay on the wall
         self.step_count += 1
