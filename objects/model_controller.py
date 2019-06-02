@@ -87,7 +87,9 @@ class ControllerEnv(gym.Env):
                     s_model.initial_state: self.rnn_state
                     }
 
-            logmix, mean, logstd, self.rnn_state = s_model.sess.run(s_model.target_z, s_model.final_state, feed)
+            logmix, mean, logstd, self.rnn_state = s_model.sess.run([s_model.out_logmix,
+                                                                           s_model.out_mean,
+                                                                           s_model.out_logstd, s_model.final_state], feed)
             self.z = s_model.get_next_z(logmix, mean, logstd, self.temperature)
 
         if self.model:
