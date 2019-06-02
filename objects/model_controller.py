@@ -32,7 +32,6 @@ class ControllerEnv(gym.Env):
 
         self.action_scale = 0.4
 
-        self.reset()
 
         self.action_space = spaces.Box(-5.0 / self.action_scale, 5.0 / self.action_scale, shape=())
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(hps.seq_width, ))
@@ -48,6 +47,8 @@ class ControllerEnv(gym.Env):
             self.zero_state = self.rnn.sess.run(self.rnn.zero_state)
 
             self.observation_space = spaces.Box(-np.inf, np.inf, shape=(hps.seq_width + hps.rnn_size * 2, ))
+
+        self.reset()
 
     def seed(self, seed=None):
         #self._seed = seed
