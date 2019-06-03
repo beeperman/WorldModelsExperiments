@@ -180,14 +180,15 @@ class MDNRNN(TensorFlowModel):
 
         flat_target_restart = tf.reshape(self.target_restart, [-1, 1])
 
-        self.r_cost = tf.nn.sigmoid_cross_entropy_with_logits(labels=flat_target_restart,
-                                                              logits=tf.reshape(self.out_restart_logits, [-1, 1]))
+        self.r_cost = tf.reduce_mean(tf.square(flat_target_restart - tf.reshape(self.out_restart_logits, [-1, 1])))
+        #self.r_cost = tf.nn.sigmoid_cross_entropy_with_logits(labels=flat_target_restart,
+        #                                                      logits=tf.reshape(self.out_restart_logits, [-1, 1]))
 
         #factor = tf.ones_like(self.r_cost) + flat_target_restart * (self.hps.restart_factor - 1.0)
 
         #self.r_cost = tf.reduce_mean(tf.multiply(factor, self.r_cost))
 
-        self.cost = self.z_cost# + self.r_cost
+        self.cost = self.z_cost #+ self.r_cost
 
         if self.hps.is_training == 1:
             self.lr = tf.Variable(self.hps.learning_rate, trainable=False)

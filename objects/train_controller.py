@@ -22,10 +22,12 @@ from model_controller import ControllerEnv
 
 parser = argparse.ArgumentParser(description='train the controller. choose to load rnn or not')
 parser.add_argument('--loadrnn', action='store_true', help='load the rnn model')
+parser.add_argument('--restore', type=str, default=None, help='restore model')
 parser.add_argument('--name', type=str, default="all", help='name of the series file used to train rnn')
 parser.add_argument('--int', type=int, default=0, help='the id of the vision model to load an integer default: 0')
 parser.add_argument('--seed', type=int, default=0, help='seed used default: 0')
 parser.add_argument('--beta', type=float, default=10.0, help='the beta value of the model to load')
+parser.add_argument('--stage', type=int, default=2, help='stage to run')
 args = parser.parse_args()
 
 # load vision model
@@ -58,43 +60,44 @@ def run_task(*_, **__):
         with LocalRunner() as runner:
             #env = TfEnv(normalize(gym.make("InvertedDoublePendulum-v2")))
             #env = TfEnv(gym.make("Pendulum-v0"))
-            env = TfEnv(ControllerEnv(vae_load=vision_load_path, rnn_load=memory_load_path))
+            env = TfEnv(ControllerEnv(vae_load=vision_load_path, rnn_load=memory_load_path, stage=args.stage))
 
-            policy = GaussianMLPPolicy(
-                env_spec=env.spec,
-                hidden_sizes=(),
-                #hidden_sizes=(64, 64),
-                hidden_nonlinearity=tf.nn.tanh,
-                output_nonlinearity=None,
-            )
+            if args.restore:
+                runner.restore(args.restore, env=env)
+            else:
+                baseline = GaussianMLPBaseline(
+                    env_spec=env.spec,
+                    regressor_args=dict(
+                        # hidden_sizes=(32, 32),
+                        hidden_sizes=(32,),
+                        use_trust_region=True,
+                    ),
+                )
+                policy = GaussianMLPPolicy(
+                    env_spec=env.spec,
+                    hidden_sizes=(),
+                    # hidden_sizes=(64, 64),
+                    hidden_nonlinearity=tf.nn.tanh,
+                    output_nonlinearity=None,
+                )
 
-            baseline = GaussianMLPBaseline(
-                env_spec=env.spec,
-                regressor_args=dict(
-                    #hidden_sizes=(32, 32),
-                    hidden_sizes=(32,),
-                    use_trust_region=True,
-                ),
-            )
-
-            algo = PPO(
-                env_spec=env.spec,
-                policy=policy,
-                baseline=baseline,
-                max_path_length=530,
-                discount=0.9,
-                gae_lambda=0.95,
-                lr_clip_range=0.2,
-                policy_ent_coeff=0.0,
-                optimizer_args=dict(
-                    batch_size=32,
-                    max_epochs=10,
-                    learning_rate=0.0001
-                ),
-                plot=False,
-            )
-
-            runner.setup(algo, env)
+                algo = PPO(
+                    env_spec=env.spec,
+                    policy=policy,
+                    baseline=baseline,
+                    max_path_length=530,
+                    discount=0.9,
+                    gae_lambda=0.95,
+                    lr_clip_range=0.2,
+                    policy_ent_coeff=0.0,
+                    optimizer_args=dict(
+                        batch_size=32,
+                        max_epochs=10,
+                        learning_rate=0.0001
+                    ),
+                    plot=False,
+                )
+                runner.setup(algo, env)
 
             runner.train(n_epochs=1200, batch_size=2048, plot=False)
 
