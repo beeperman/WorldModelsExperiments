@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(description='The ID (integer) of the model')
 parser.add_argument('--int', type=int, default=0, help='an integer default: 0')
 parser.add_argument('--beta', type=float, default=10.0, help='a float default: 10')
 parser.add_argument('--datadir', type=str, default="train_record", help='directory to load data')
+parser.add_argument('--kl', type=float, default=0.5, help='kl tolerance')
 args = parser.parse_args()
 
 model_save_dir = "train_beta_vae"
@@ -23,7 +24,7 @@ np.set_printoptions(precision=4, edgeitems=6, linewidth=100, suppress=True)
 z_size = 64
 batch_size = 100
 learning_rate = 0.0001
-kl_tolerance = 0.5
+kl_tolerance = args.kl
 
 NUM_EPOCH = 10
 DATA_DIR = args.datadir
